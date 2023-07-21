@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from django.contrib.auth import authenticate
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication,JWTTokenUserAuthentication
 from .renderer import UserRenderer
 from rest_framework.generics import UpdateAPIView
 
@@ -81,11 +81,14 @@ class LoginView(APIView):
                 if check_user is not None:
                     token = get_tokens_for_user(check_user)
                     
+                    check_admin=MyUser.objects.filter(email=check_user).values_list('is_admin',flat=True)
+                    print(list(check_admin),"sdasdasdas")
                     return Response(
                         {
                             'token': token,
                             'message': "Login Successfully",
-                            'status': status.HTTP_200_OK
+                            'status': status.HTTP_200_OK,
+                            'isAdmin':list(check_admin)
                         }
                     )
                 return Response({
@@ -149,12 +152,15 @@ class ForgotPasswordView(APIView):
 
 
 class ProfileView(APIView):
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [JWTTokenUserAuthentication]
 
     def get(self, request, *args, **kwargs):
         try:
-            print(request.user.id)
-            serializer = UserProfileSerializer(request.user)
+            print(request.user.firstname,"asaaadasdasdasd")
+            userData=MyUser.objects.filter(id=request.user.id).first()
+
+            serializer = UserProfileSerializer(userData)
+        
             userAdd = UserAddress.objects.filter(user_id=request.user.id)
             userPay = UserPayment.objects.filter(user_id=request.user.id)
             # userPay=get_or_none(UserPayment,user_id=serializer.data.id)
@@ -179,19 +185,23 @@ class ProfileView(APIView):
                 'status': status.HTTP_404_NOT_FOUND
             })
 
-    def put(self, request, pk=None):
+    def put(self, request,pk=None):
         try:
 
             result = request.data
+          
             userProf = get_or_none(MyUser, id=pk)
+            print(request.data,"asdadasasasasdasdasdas")
+         
             if userProf is not None:
                 serializer = UserProfileSerializer(
                     userProf, data=request.data, partial=True)
                 # print(serializer,"data")
 
                 if serializer.is_valid():
-                    id1 = serializer.save()
-                    print(id1, "id1")
+                    print("lllllllllll")
+                    serializer.save()
+                    
                     # UpdateAddress()
 
                     return Response(
@@ -208,7 +218,7 @@ class ProfileView(APIView):
                 )
             return Response(
                 {
-                    'message': f'Id {pk} doesnot exist',
+                    'message': 'User  doesnot exist',
                     'status': status.HTTP_404_NOT_FOUND
                 }
             )

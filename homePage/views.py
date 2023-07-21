@@ -8,7 +8,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from .models import Product,CartItem,ShoppingSession,ShippingAddress,UserRating,Order,ProductCategory,ProductSubCategory,Favourites
 from .serializers import ProductSerializer ,CartSerializer,SessionSerializer,ShippingSerializer,PaymentSerializer,UserRatingSerializer,ProductCategorySerializer,ProductSubCategorySerializer,FavouritesSerializer,OrderSerializer
 from .permissions import productPermission
- 
+from django.db.models import Q
 
 
 
@@ -215,15 +215,21 @@ class CartItemView(APIView):
 
     def put(self,request,pk=None):
         try:
-            cartData=get_or_none(CartItem,id=pk)
-
+            sessionid=ShoppingSession.objects.filter(user_id=request.user.id).values_list('id',flat=True)
+            print(sessionid,pk,"===========================================")
+            
+            
+            
+            cartData=CartItem.objects.filter(product_id=pk,session_id=list(sessionid)[0]).first()
+            print(cartData,"sdasdasdasdasdasdasdasdasdasdasd")
             if cartData is not  None:
                 serializer=CartSerializer(cartData,data=request.data,partial=True)
 
                 if serializer.is_valid():
                     serializer.save()
                     return Response({
-                        "message":"Quantity Update Successfully"
+                        "message":"Quantity Update Successfully",
+                        'status':status.HTTP_200_OK
                     })
                 return Response(
                     {
@@ -245,7 +251,9 @@ class CartItemView(APIView):
 
     def delete(self, request,pk=None):
         try:
-            cartData=get_or_none(CartItem,id=pk)
+            sessionid=ShoppingSession.objects.filter(user_id=request.user.id).values_list('id',flat=True)
+            cartData=CartItem.objects.filter(product_id=pk,session_id=list(sessionid)[0]).first()
+            print(cartData,"sesdasdn")
 
             if cartData is not None:
                 cartData.delete()
@@ -505,11 +513,14 @@ class FavouriteView(APIView):
     def post(self, request):
         try:
             formData=request.data 
-            userId=request.user.id 
+            userId=4 
+            print(userId,"sdasdasdasdasdasdasd")
             formData['user_id']=userId
             check_fav=Favourites.objects.filter(user_id=userId,product_id=formData['product_id'])
+            print("1111111111111111111111111111111111111111111")
 
-        
+            print(check_fav,"number===============================================")
+            print("22222222222222222222222222222222222222222")
             if check_fav:
                 return Response(
                     {
